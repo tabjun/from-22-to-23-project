@@ -309,7 +309,6 @@ for i in range(a+1):
     print(sum) #출력오류
 
 #다시
-
 a = int(input())
 sum = 0
 for i in range(a+1):
@@ -317,4 +316,78 @@ for i in range(a+1):
 print(sum) # 반복문 안에 print가 있으면 더해줄때마다 출력해서 안됨, 최종값 한번만 나와야 함
 
 #%%
-#25304번
+#25304번, 영수증
+# if가 반복문 내에서 돌아가서 각 값마다 if 적용
+total = int(input()) # 영수증 총 금액
+things = int(input()) # 총 개수
+
+sum = 0 # 초기값 지정
+for i in range(things+1):  # 총 개수만큼 반복하게
+    a , b = map(int,input().split())  # 각 품목의 개수와 가격
+    sum += (a+b) 
+    
+    if sum == total:
+        print('Yes')
+    else:
+        print('No')
+
+#다시
+total = int(input()) # 영수증 총 금액
+things = int(input()) # 총 개수
+
+sum = 0 # 초기값 지정
+for i in range(things+1):  # 총 개수만큼 반복하게
+    a , b = map(int,input().split())  # 각 품목의 개수와 가격
+    sum += (a+b) 
+    
+if sum == total:
+    print('Yes')
+else:
+    print('No')
+    
+#다시
+total = int(input()) # 영수증 총 금액
+things = int(input()) # 총 개수
+
+sum = 0 # 초기값 지정
+for i in range(things):  # 총 개수만큼 반복하게, +1해주는 게 아니였음
+    a , b = map(int,input().split())  # 각 품목의 개수와 가격
+    sum += (a*b)  # 물건의 값은 개수 + 값이 아닌 개수*값, 제대로 보고 하기 
+    
+if sum == total:
+    print('Yes')
+else:
+    print('No')
+#%%
+#15552번 빠른 a+b, input대신에 sys.stdin.readline사용할 수 있다.
+import sys 
+
+number = int(input()) # 첫줄에 주어진 개수 5를 사용하기 위함
+for i in range(number):
+    a,b = map(int,sys.stdin.readline().split()) #input대신 넣어봄
+    print(a+b)
+#%%
+#11021번, A+B - 7
+a = int(input()) #개수 받기
+for i in range(a):
+    q,w = map(int,input().split())
+    print(f"Case #{i}:{q+w}") # 포맷을 이용한 각 i의 출력값 확인
+    
+#다시
+a = int(input()) #개수 받기
+for i in range(a+1):  # 이렇게 1, 로 지정안하고 그냥 개수만 지정하면 그 수만큼 반복한다는 뜻
+    q,w = map(int,input().split())
+    print(f"Case #{i}: {q+w}") # 포맷을 이용한 각 i의 출력값 확인
+
+#다른 사람이 한 답, 나랑 별 다른거 못 느끼겠는데 정답임
+t = int(input())
+
+for i in range(1, t+1):  # 1부터 t까지
+    a, b = map(int, input().split())
+    print(f'Case #{i}: {a+b}')
+    
+#다시
+a = int(input()) #개수 받기
+for i in range(1,a+1):  # 이렇게 1, 로 지정안하고 그냥 개수만 지정하면 그 수만큼 반복한다는 뜻
+    q,w = map(int,input().split())
+    print(f"Case #{i}: {q+w}") # 포맷을 이용한 각 i의 출력값 확인
