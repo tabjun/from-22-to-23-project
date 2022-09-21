@@ -52,22 +52,28 @@ print(user.info())
 # 예 아니오 값만 하기 위해 0이면 0 0보다 크면 1로 변경
 user['대출신청여부'] = user['is_applied'].apply(lambda x: 1 if x >= 1 else 0 if x == 0 else x)
 #%%
+#85개 공통 결측 행 제거, 0.006%의 비율을 차지하고 있는 극 소량의 데이터이며, 조회과정에서
+# 소득정보 입력에 대해 무관이라고 선택을 할 수도 있음.
 df_copy = df.copy()
 df_copy.dropna(subset=['employment_type'],inplace = True)
 print(df_copy.isnull().sum())
 #%%
+# yearly_income을 채우는 과정
 # 얘가 매번 연봉도 다르고, 대출 조건 조회 기간마다 입사년월이 달라짐, 이상한 놈
 a = df_copy[df_copy['user_id']==702899]
 #%%
+# 예 아니오 값만 하기 위해 0이면 0 0보다 크면 1로 변경
+df['수입_형태'] = df['is_applied'].apply(lambda x: 1 if x >= 1 else 0 if x == 0 else x)
+#%%
 # 대출 신청을 했지만, 정확한 분류에 방해를 주는 것 같으므로, id =  702899행 제거
-df_null_id = df_copy[df_copy['user_id']!=702899]
-print(df_null_id)
+#df_null_id = df_copy[df_copy['user_id']!=702899]
+#print(df_null_id)
 #%%
-print(df_null_id.isnull().sum())
+#print(df_null_id.isnull().sum())
 #%%
-df_null_id['yearly_income'].fillna(0,inplace = True)
+#df_null_id['yearly_income'].fillna(0,inplace = True)
 #%%
-df1 = df_null_id.copy()
+#df1 = df_null_id.copy()
 #%%
 # 입사년월과 탄생년도 비교를 위해 입사연도와 입사월으로 분리해주기
 df_over = df1[df1['company_enter_month']>=202207].sort_values(['company_enter_month']) 
@@ -77,8 +83,11 @@ df_null = df1[df1['company_enter_month'].isnull()==True]
 df_under['입사_년도'] = df_under['company_enter_month']//100
 df_under['입사_월'] = df_under['company_enter_month']%100
 #%%
-df_over['입사_년도'] = df_over['company_enter_month']//100
-df_over['입사_월'] = df_over['company_enter_month']%100
+df_over['입사_년도'] = df_over['company_enter_month']//10000
+df_over['입사_월'] = df_over['company_enter_month']%10000
 #%%
 df_1 = pd.concat([df_under, df_over], axis = 0)
 df_2 = pd.concat([df_1, df_null], axis = 0)
+#%%
+a = df[df['personal_rehabilitation_yn']!=1].copy()
+a
