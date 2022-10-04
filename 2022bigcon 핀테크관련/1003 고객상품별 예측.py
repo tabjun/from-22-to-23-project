@@ -76,7 +76,6 @@ sort_user = user.sort_values('application_id')
 #%%
 left = pd.merge(sort_loan, sort_user, left_on='application_id', 
                  right_on='application_id', how='left')
-#%%
 print(left.isnull().sum())
 left_copy = left.copy()
 #%%
@@ -122,15 +121,15 @@ test_gen = left_copy[(left_copy['month']==6)&
                      ((left_copy['personal_rehabilitation_yn']!=1)&
                      (left_copy['personal_rehabilitation_complete_yn']!=1))]
 #%%
-train_unu.to_csv('train_unu.csv')
-test_unu.to_csv('test_unu.csv')
-train_gen.to_csv('train_gen.csv')
-test_gen.to_csv('test_gen.csv')
+train_unu.to_csv('train_unu.csv',encoding = 'cp949')
+test_unu.to_csv('test_unu.csv',encoding = 'cp949')
+train_gen.to_csv('train_gen.csv',encoding = 'cp949')
+test_gen.to_csv('test_gen.csv',encoding = 'cp949')
 #%%
-train_unu = pd.read_csv('train_unu.csv')
-test_unu = pd.read_csv('test_unu.csv')
-train_gen = pd.read_csv('train_gen.csv')
-test_gen = pd.read_csv('test_gen.csv')
+train_unu = pd.read_csv('train_unu.csv',encoding = 'cp949')
+test_unu = pd.read_csv('test_unu.csv',encoding = 'cp949')
+train_gen = pd.read_csv('train_gen.csv',encoding = 'cp949')
+test_gen = pd.read_csv('test_gen.csv',encoding = 'cp949')
 
 #%%
 # gen의 개인 회생, 납입 완료 값 확인 0 또는 결측만 있음, 잘 담김
@@ -166,13 +165,14 @@ print(f'test개인회생 여부 결측 개수: {test_gen.personal_rehabilitation
 # 정보가 다 담겨 있기 때문에, 굳이 결측을 채워주지 않고, 변수를 제거하고 사용
 # 개인회생 여부 포함하면서 나눠줌, gen, unu 셋에는 개인회생을 신청한 애들과, 신청안한 애들
 # 나눠짐, 변수 제거해도 그 속성은 남아있어서 변수 제거
-train_unu.drop(['personal_rehabilitation_yn','personal_rehabilitation_complete_yn'],axis=1,inplace =True)
+# unu는 개인회생 완납, 미납 차이있는지 살펴봐야해서 완납은 살려 둠
+train_unu.drop(['personal_rehabilitation_yn'],axis=1,inplace =True)
 train_gen.drop(['personal_rehabilitation_yn','personal_rehabilitation_complete_yn'],axis=1,inplace =True)
-test_unu.drop(['personal_rehabilitation_yn','personal_rehabilitation_complete_yn'],axis=1,inplace =True)
+test_unu.drop(['personal_rehabilitation_yn'],axis=1,inplace =True)
 test_gen.drop(['personal_rehabilitation_yn','personal_rehabilitation_complete_yn'],axis=1,inplace =True)
 
 #%%
-# 6월에 존재하는
+# 6월에 존재하는 결측치, train셋에도 있는지 살표보기
 a = test_gen[test_gen['month']==6]['application_id'].tolist()
 app = train_gen[train_gen['application_id'].isin(a)]
 print(app.isnull().sum())
@@ -282,6 +282,92 @@ print(logis.summary())
 정규분포 형태를 띔,
 '''
 #%%
+# 수치형 변수 스케일링
+# 이상치 확인
+train_gen_num = train_gen.copy()[['loan_limit','loan_rate','credit_score','yearly_income','desired_amount',
+                        'existing_loan_cnt','existing_loan_amt']]
+
+f, ax = plt.subplots(figsize=(16, 14))
+#ax.set_xscale("log")
+ax = sns.boxplot(data = train_gen_num , orient="h", palette="Set1")
+
+ax.xaxis.grid(False)
+
+plt.xlabel("Numeric values", fontsize = 10)
+plt.ylabel("Feature names", fontsize = 10)
+plt.title("Numeric Distribution of Features", fontsize = 15)
+sns.despine(trim = True, left = True)
+#%%
+# train_gen 스케일링을 위한 수치형, 범주형 나누기
+train_gen_num = train_gen.copy()[['loan_limit','birth_year','loan_rate','credit_score','yearly_income','desired_amount',
+                                  'existing_loan_cnt','existing_loan_amt']]
+train_gen_ob = train_gen.copy().drop(['loan_limit','birth_year','loan_rate','credit_score','yearly_income','desired_amount',
+                                      'existing_loan_cnt','existing_loan_amt'],axis=1)
+#%%
+# train_unu 스케일링을 위한 수치형, 범주형 나누기
+train_unu_num = train_unu.copy()[['loan_limit','birth_year','loan_rate','credit_score','yearly_income','desired_amount',
+                                  'existing_loan_cnt','existing_loan_amt']]
+train_unu_ob = train_unu.copy().drop(['loan_limit','birth_year','loan_rate','credit_score','yearly_income','desired_amount',
+                                      'existing_loan_cnt','existing_loan_amt'],axis=1)
+#%%
+# test_gen 스케일링을 위한 수치형, 범주형 나누기
+test_gen_num = test_gen.copy()[['loan_limit','loan_rate','birth_year','credit_score','yearly_income','desired_amount',
+                                 'existing_loan_cnt','existing_loan_amt']]
+test_gen_ob = test_gen.copy().drop(['loan_limit','loan_rate','birth_year','credit_score','yearly_income','desired_amount',
+                                     'existing_loan_cnt','existing_loan_amt'],axis=1)
+#%%
+# train_unu 스케일링을 위한 수치형, 범주형 나누기
+test_unu_num = test_unu.copy()[['loan_limit','loan_rate','birth_year','credit_score','yearly_income','desired_amount',
+                                 'existing_loan_cnt','existing_loan_amt']]
+test_unu_ob = test_unu.copy().drop(['loan_limit','loan_rate','birth_year','credit_score','yearly_income','desired_amount',
+                                     'existing_loan_cnt','existing_loan_amt'],axis=1)
+#%%
+# 이상치가 존재하므로 수치형 변수 gen 스케일링
+rbs = RobustScaler()
+train_gen_scaled = rbs.fit_transform(train_gen_num)
+test_gen_scaled = rbs.transform(test_gen_num)
+#%%
+# unu 스케일링
+train_unu_scaled = rbs.fit_transform(train_unu_num)
+test_unu_scaled = rbs.transform(test_unu_num)
+#%%
+# 배열 형태로 반환되므로, 데이터 프레임으로 변환
+train_gen_scaled = pd.DataFrame(data = train_gen_scaled )
+test_gen_scaled = pd.DataFrame(data = test_gen_scaled)
+train_unu_scaled = pd.DataFrame(data = train_unu_scaled)
+test_unu_scaled = pd.DataFrame(data = test_unu_scaled)
+#%%
+# 변수명 삽입
+train_gen_scaled.columns = ['loan_limit','birth_year','loan_rate','credit_score','yearly_income','desired_amount',
+                                  'existing_loan_cnt','existing_loan_amt']
+
+train_unu_scaled.columns = ['loan_limit','birth_year','loan_rate','credit_score','yearly_income','desired_amount',
+                                  'existing_loan_cnt','existing_loan_amt']
+
+test_gen_scaled.columns = ['loan_limit','birth_year','loan_rate','credit_score','yearly_income','desired_amount',
+                                  'existing_loan_cnt','existing_loan_amt']
+
+test_unu_scaled.columns = ['loan_limit','birth_year','loan_rate','credit_score','yearly_income','desired_amount',
+                                  'existing_loan_cnt','existing_loan_amt']
+#%%
+# 나눠준 데이터 합치기 concat
+train_gen_sca = pd.concat([train_gen_ob,train_gen_scaled])
+train_unu_sca = pd.concat([train_unu_ob,train_unu_scaled])
+test_gen_sca = pd.concat([test_gen_ob,test_gen_scaled])
+test_unu_sca = pd.concat([test_unu_ob,test_unu_scaled])
+#%%
+train_gen_sca.to_csv('scaled_train_gen.csv')
+train_unu_sca.to_csv('scaled_train_unu.csv')
+test_gen_sca.to_csv('scaled_test_gen.csv')
+test_unu_sca.to_csv('scaled_test_unu.csv')
+#%%
+# train, validation 나누기
+train_gen_x = train_gen.drop('is_applied',axis=1)
+train_gen_y = train_gen['is_applied']
+
+x_train, x_val, y_train, y_val = train_test_split(train_gen_x,train_gen_y, test_size=0.4, random_state=777)
+
+#%%
 #수치형 변수만 남기기
 #tr_gen_num = train_gen.copy().drop(['application_id', 'loanapply_insert_time', 'bank_id', 'product_id',
 #       'user_id', 'birth_year','gender', 'insert_time','income_type',
@@ -303,15 +389,23 @@ print(vif)
 logis = sm.Logit.from_formula('is_applied ~ existing_loan_amt', train_unu).fit()
 print(logis.summary())
 #%%
-multi_num_logit = sm.Logit.from_formula('''is_applied ~ loan_limit + loan_rate + 
-                                         birth_year + gender + credit_score + 
-                                         yearly_income + income_type + 
-                                         employment_type + houseown_type +
-                                         desired_amount + purpose + existing_loan_cnt + existing_loan_amt''', data= train_gen).fit()
+multi_num_logit = sm.Logit.from_formula('''is_applied ~ employment_type:income_type+ employment_type:houseown_type +employment_type:purpose+ employment_type:gender+ employment_type:bank_id+ employment_type:product_id
+                                        +income_type:purpose +income_type:houseown_type +income_type:gender+ income_type:bank_id +income_type:product_id+ purpose:houseown_type+ pose:gender 
+                                        +purpose:bank_id +purpose:product_id+ houseown_type:gender+ houseown_type:bank_id+ houseown_type:product_id +gender:bank_id+ gender:product_id+ bank_id:product_id
+                                        +employment_type:income_type:houseown_type+ employment_type:income_type:purpose+ employment_type:income_type:houseown_type+ employment_type:income_type:gender
+                                        +employment_type:income_type:bank_id+ employment_type:income_type:product_id+ income_type:purpose:houseown_type +income_type:purpose:gender
+                                        +income_type:purpose:bank_id +income_type:purpose:product_id+ purpose:houseown_type:gender+ purpose:houseown_type:bank_id+ purpose:houseown_type:product_id
+                                        +houseown_type:gender:bank_id+ houseown_type:gender:product_id+ gender:bank_id:product_id +employment_type:income_type:purpose:houseown_type
+                                        +employment_type:income_type:purpose:gender +employment_type:income_type:purpose:bank_id +employment_type:income_type:purpose:product_id
+                                        +income_type:purpose:houseown_type:gender+ income_type:purpose:houseown_type:bank_id +income_type:purpose:houseown_type:product_id
+                                        +purpose:houseown_type:gender:bank_id+ purpose:houseown_type:gender:product_id +houseown_type:gender:bank_id:product_id
+                                        +employment_type:income_type:purpose:houseown_type:gender+ employment_type:income_type:purpose:houseown_type:bank_id +employment_type:income_type:purpose:houseown_type:product_id
+                                        +income_type:purpose:houseown_type:gender:bank_id +income_type:purpose:houseown_type:gender:product_id
+                                        +purpose:houseown_type:gender:bank_id:product_id+ employment_type:income_type:purpose:houseown_type:gender:bank_id:product_id
+                                        +income_type+ gender +income_type + purpose + houseown_type +existing_loan_cnt+  existing_loan_amt + loan_rate ;
+''', data= train_gen).fit()
 #%%
-train_sample = train_gen.sample(frac = 0.005)
-#%%
-logis = sm.Logit.from_formula('is_applied ~ employment_type + birth_year + gender + insert_time + credit_score + yearly_income + company_enter_month + income_type + purpose + houseown_type + loan_limit + desired_amount + existing_loan_cnt + existing_loan_amt + loan_rate + product_id + bank_id + loanapply_insert_time', train_sample).fit()
+logis = sm.Logit.from_formula('is_applied ~ employment_type + birth_year + gender + insert_time + credit_score + yearly_income + company_enter_month + income_type + purpose + houseown_type + loan_limit + desired_amount + existing_loan_cnt + existing_loan_amt + loan_rate + product_id + bank_id + loanapply_insert_time', train_gen).fit()
 #%%
 print(logis.summary())
 #%%
