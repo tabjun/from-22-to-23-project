@@ -38,8 +38,8 @@ pd.options.display.float_format = '{:.2f}'.format
 #%%
 # py , ipynb 변환
 import subprocess
-filename = r'C:\\Users\\215-01\\Desktop\\빅콘\\1008 뭔가 잘못됐음.py'
-dest = r'C:\\Users\\215-01\\Desktop\\빅콘\\bigcon_1008.ipynb'
+filename = r'C:\\Users\\215-01\\Desktop\\빅콘\\gen처리.py'
+dest = r'C:\\Users\\215-01\\Desktop\\빅콘\\gen처리.ipynb'
 subprocess.run(['ipynb-py-convert', filename, dest])
 #%%
 # 플랏 한글
@@ -142,16 +142,6 @@ print(train_unu[['personal_rehabilitation_yn','personal_rehabilitation_complete_
 print('특별 테스트')
 print(test_unu[['personal_rehabilitation_yn','personal_rehabilitation_complete_yn']].value_counts())
 #%%
-print(train_unu.personal_rehabilitation_complete_yn.value_counts())
-print(test_unu.personal_rehabilitation_complete_yn.value_counts())
-# 결측치 종류 MAR, 개인 회생 납입 완료 여부 변수, 1을 제외하곤 개인회생조차 신청안했거나,
-# 개인회생을 신청안했지만 납입 하지 않은 경우, 결측치 0으로 채워주면 됨
-print('결측치 개수 파악')
-train_unu['personal_rehabilitation_complete_yn'].fillna(0,inplace = True)
-test_unu['personal_rehabilitation_complete_yn'].fillna(0,inplace = True)
-print(f'개인회생납입 완료 여부 결측 개수: {train_unu.personal_rehabilitation_complete_yn.isnull().sum()}')
-print(f'test개인회생납입 완료 여부 결측 개수: {test_unu.personal_rehabilitation_complete_yn.isnull().sum()}')
-#%%
 #train셋의 user id로 탄생년도와 성별 채우기
 # 두 변수는 개인의 고유적인 특징, 불변이기 때문에 채워줌
 train_gen['birth_year'] = train_gen['birth_year'].fillna(train_gen.groupby('user_id')['birth_year'].transform('mean'))
@@ -160,36 +150,13 @@ train_gen['gender'] = train_gen['gender'].fillna(train_gen.groupby('user_id')['g
 test_gen['birth_year'] = test_gen['birth_year'].fillna(train_gen.groupby('user_id')['birth_year'].transform('mean'))
 test_gen['gender'] = test_gen['gender'].fillna(train_gen.groupby('user_id')['gender'].transform('mean'))
 #%%
-train_unu['birth_year'] = train_unu['birth_year'].fillna(train_unu.groupby('user_id')['birth_year'].transform('mean'))
-train_unu['gender'] = train_unu['gender'].fillna(train_unu.groupby('user_id')['gender'].transform('mean'))
-#%%
-test_unu['birth_year'] = train_unu['birth_year'].fillna(train_unu.groupby('user_id')['birth_year'].transform('mean'))
-test_unu['gender'] = train_unu['gender'].fillna(train_unu.groupby('user_id')['gender'].transform('mean'))
-#%%
 # 나눠진 데이터 셋들의 정보에는, 개인 회생을 신청한 사람과, 신청하지 않은 사람의 정보가 담겨있음.
 # 정보가 다 담겨 있기 때문에, 굳이 결측을 채워주지 않고, 변수를 제거하고 사용
 # 개인회생 여부 포함하면서 나눠줌, gen, unu 셋에는 개인회생을 신청한 애들과, 신청안한 애들
 # 나눠짐, 변수 제거해도 그 속성은 남아있어서 변수 제거
 # unu는 개인회생 완납, 미납 차이있는지 살펴봐야해서 완납은 살려 둠
-train_unu.drop(['personal_rehabilitation_yn'],axis=1,inplace =True)
 train_gen.drop(['personal_rehabilitation_yn','personal_rehabilitation_complete_yn'],axis=1,inplace =True)
-test_unu.drop(['personal_rehabilitation_yn'],axis=1,inplace =True)
 test_gen.drop(['personal_rehabilitation_yn','personal_rehabilitation_complete_yn'],axis=1,inplace =True)
-#%%
-
-# 단변량 로지스틱
-# n이 많아서 유의확률 낮음
-'''
-logis_gen_birth = sm.Logit.from_formula('is_applied ~ birth_year', train_gen).fit()
-print(logis_gen_birth.summary())
-print(np.exp(logis_gen_birth.params)) #  로짓값 출력
-print(f'train_gen:{logis_gen_birth.aic}')
-
-logis_unu_birth = sm.Logit.from_formula('is_applied ~ birth_year', train_unu).fit()
-print(logis_unu_birth.summary())
-print(np.exp(logis_unu_birth.params)) #  로짓값 출력
-print(f'train_unu:{logis_unu_birth.aic}')
-'''
 #%%
 '''
 기대출수가 존재하지만, 기대출금액이 0인 경우: 금융사에서 금액을 제공하지 않은 경우
@@ -198,11 +165,6 @@ print(f'train_unu:{logis_unu_birth.aic}')
 print(train_gen[(train_gen['existing_loan_amt']==0)&(train_gen['existing_loan_cnt']>=1)])
 print('\t')
 print(test_gen[(test_gen['existing_loan_amt']==0)&(test_gen['existing_loan_cnt']>=1)])
-print('\t')
-print(train_unu[(train_unu['existing_loan_amt']==0)&(train_unu['existing_loan_cnt']>=1)])
-print('\t')
-print(test_unu[(test_unu['existing_loan_amt']==0)&(test_unu['existing_loan_cnt']>=1)])
-
 #%%
 print(train_gen[(train_gen['existing_loan_amt'].isnull())&(train_gen['existing_loan_cnt'].isnull())])
 print('\t')
@@ -211,18 +173,35 @@ print('\t')
 print(train_unu[(train_unu['existing_loan_amt'].isnull())&(train_unu['existing_loan_cnt'].isnull())])
 print('\t')
 print(test_unu[(test_unu['existing_loan_amt'].isnull())&(test_unu['existing_loan_cnt'].isnull())])
+
 #%%
 # cnt 변수의 nan 값은 기대출 수가 없는 사람으로 판단하고 cat, amt 변수들의 nan값들을 다 0으로 채워줌
 train_gen.loc[train_gen['existing_loan_cnt'] != train_gen['existing_loan_cnt'], 'existing_loan_cnt'] = 0
 train_gen.loc[train_gen['existing_loan_amt'] != train_gen['existing_loan_amt'], 'existing_loan_amt'] = 0
+#%%
 # 기대출 수가 있지만 금융사에서 제공해주지 않아 amt변수의 값이 0인 것들은 기대출수의 따른 평균 값으로 대체
-train_gen.loc[(train_gen[‘existing_loan_cnt'] == 1) & (train_gen[‘existing_loan_amt'] == 0),'existing_loan_amt'] = 35353221
-train_gen.loc[(train_gen[‘existing_loan_cnt'] == 2) & (train_gen[‘existing_loan_amt'] == 0),'existing_loan_amt'] = 57461998
-train_gen.loc[(train_gen[‘existing_loan_cnt'] == 3) & (train_gen[‘existing_loan_amt'] == 0),'existing_loan_amt'] = 75134303
-train_gen.loc[(train_gen[‘existing_loan_cnt'] == 4) & (train_gen[‘existing_loan_amt'] == 0),'existing_loan_amt'] = 90688457
-train_gen.loc[(train_gen[‘existing_loan_cnt'] == 5) & (train_gen[‘existing_loan_amt'] == 0),'existing_loan_amt'] = 105104832
-train_gen.loc[(train_gen[‘existing_loan_cnt'] == 6) & (train_gen[‘existing_loan_amt'] == 0),'existing_loan_amt'] = 113855294
-train_gen.loc[(train_gen[‘existing_loan_cnt'] == 13) & (train_gen[‘existing_loan_amt'] == 0),'existing_loan_amt'] = 151771285
+train_gen.loc[(train_gen['existing_loan_cnt'] == 1) & (train_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 35353221
+train_gen.loc[(train_gen['existing_loan_cnt'] == 2) & (train_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 57461998
+train_gen.loc[(train_gen['existing_loan_cnt'] == 3) & (train_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 75134303
+train_gen.loc[(train_gen['existing_loan_cnt'] == 4) & (train_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 90688457
+train_gen.loc[(train_gen['existing_loan_cnt'] == 5) & (train_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 105104832
+train_gen.loc[(train_gen['existing_loan_cnt'] == 6) & (train_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 113855294
+train_gen.loc[(train_gen['existing_loan_cnt'] == 13) & (train_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 151771285
+
+#%%
+# cnt 변수의 nan 값은 기대출 수가 없는 사람으로 판단하고 cat, amt 변수들의 nan값들을 다 0으로 채워줌
+test_gen.loc[test_gen['existing_loan_cnt'] != test_gen['existing_loan_cnt'], 'existing_loan_cnt'] = 0
+test_gen.loc[test_gen['existing_loan_amt'] != test_gen['existing_loan_amt'], 'existing_loan_amt'] = 0
+#%%
+# 기대출 수가 있지만 금융사에서 제공해주지 않아 amt변수의 값이 0인 것들은 기대출수의 따른 평균 값으로 대체
+test_gen.loc[(test_gen['existing_loan_cnt'] == 1) & (test_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 35353221
+test_gen.loc[(test_gen['existing_loan_cnt'] == 2) & (test_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 57461998
+test_gen.loc[(test_gen['existing_loan_cnt'] == 3) & (test_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 75134303
+test_gen.loc[(test_gen['existing_loan_cnt'] == 4) & (test_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 90688457
+test_gen.loc[(test_gen['existing_loan_cnt'] == 5) & (test_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 105104832
+test_gen.loc[(test_gen['existing_loan_cnt'] == 6) & (test_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 113855294
+test_gen.loc[(test_gen['existing_loan_cnt'] == 13) & (test_gen['existing_loan_amt'] == 0),'existing_loan_amt'] = 151771285
+
 #%%
 # 조건에 맞는 행 제거
 # 2022년11월인 애, is_applied가 0, 데이터 셋 자체가 크기 때문에, 수치 강제 변동 보다는
@@ -241,16 +220,7 @@ train_gen['입사_월'] = train_gen['company_enter_month']%100
 # 확인했을 때 잘 분리됨
 print(train_gen['입사_년도'].describe()) 
 print(train_gen['입사_월'].describe())
-#%%
-# train_unu 년월 분리
-train_unu['입사_년도'] = train_unu['company_enter_month']//100
-train_unu['입사_월'] = train_unu['company_enter_month']%100
-#%%
-# 확인했을 때 잘 분리됨
-print(train_unu['입사_년도'].describe()) 
-print(train_unu['입사_월'].describe())
-#%%
-test_gen = pd.read_csv('test_gen.csv',encoding = 'cp949')
+
 #%%
 # test_gen 년월 분리
 test_gen_over = test_gen[test_gen['company_enter_month']>=202207]
@@ -275,76 +245,30 @@ print(test_gen_over['입사_월'].describe())
 #%%
 # 각각 입사년월 나눠준 데이터 셋 합치기
 test_gen_1 = pd.concat([test_gen_under, test_gen_over], axis = 0)
-test_gen_12 = pd.concat([test_gen_1, test_gen_null], axis = 0)
+test_gen = pd.concat([test_gen_1, test_gen_null], axis = 0)
 #%%
 # 확인, 잘 됨
 print(test_gen['입사_년도'].describe())
 print(test_gen['입사_월'].describe())
 #%%
-# test_unu 분리
-test_unu_over = test_unu[test_unu['company_enter_month']>=202207]
-test_unu_under = test_unu[test_unu['company_enter_month']<202207]
-test_unu_null = test_unu[test_unu['company_enter_month'].isnull()==True]
-#%%
-# 입사년월이 6자리인 애들
-test_unu_under['입사_년도'] = test_unu_under['company_enter_month']//100
-test_unu_under['입사_월'] = test_unu_under['company_enter_month']%100
-#%%
-# 확인했을 때 잘 분리됨
-print(test_unu_under['입사_년도'].describe()) 
-print(test_unu_under['입사_월'].describe())
-#%%
-# 입사년월이 8자리인 애들
-test_unu_over['입사_년도'] = test_unu_over['company_enter_month']//10000
-test_unu_over['입사_월'] = (test_unu_over['company_enter_month']//100)%100
-#%%
-# 확인했을 때 잘 분리됨
-print(test_unu_over['입사_년도'].describe()) 
-print(test_unu_over['입사_월'].describe())
-#%%
-# 각각 입사년월 나눠준 데이터 셋 합치기
-test_unu_1 = pd.concat([test_unu_under, test_unu_over], axis = 0)
-test_unu = pd.concat([test_unu_1, test_unu_null], axis = 0)
-#%%
-# 확인, 잘 됨
-print(test_unu['입사_년도'].describe())
-print(test_unu['입사_월'].describe())
-#%%
 # 근속으로 만들기
 train_gen['근속년도'] = 2022 - train_gen['입사_년도']  
 train_gen['근속개월'] = train_gen['근속년도']*12 + train_gen['입사_월']  
 #%%
-train_unu['근속년도'] = 2022 - train_unu['입사_년도']  
-train_unu['근속개월'] = train_unu['근속년도']*12 + train_unu['입사_월']
-#%%
 test_gen['근속년도'] = 2022 - test_gen['입사_년도']  
 test_gen['근속개월'] = test_gen['근속년도']*12 + test_gen['입사_월']
 #%%
-test_unu['근속년도'] = 2022 - test_unu['입사_년도']  
-test_unu['근속개월'] = test_unu['근속년도']*12 + test_unu['입사_월']
-#%%
 train_gen['age'] = 2022 - train_gen['birth_year']  
-train_unu['age'] = 2022 - train_unu['birth_year']  
 test_gen['age'] = 2022 - test_gen['birth_year']  
-test_unu['age'] = 2022 - test_unu['birth_year']  
 #%%
 train_gen.to_csv('train_gen.csv',encoding = 'cp949')
-train_unu.to_csv('train_gen.csv',encoding = 'cp949')
 test_gen.to_csv('test_gen.csv',encoding = 'cp949')
-test_unu.to_csv('test_unu.csv',encoding = 'cp949')
 #%%
 train_gen = pd.read_csv('train_gen.csv',encoding = 'cp949')
-train_unu = pd.read_csv('train_unu.csv',encoding = 'cp949')
 test_gen = pd.read_csv('test_gen.csv',encoding = 'cp949')
-test_unu = pd.read_csv('test_unu.csv',encoding = 'cp949')
 #%%
 print(train_gen.isnull().sum())
-print('\n')
-print(train_unu.isnull().sum())
-print('\n')
 print(test_gen.isnull().sum())
-print('\n')
-print(test_unu.isnull().sum())
 #%%
 print(train_gen.dtypes)
 #%%
@@ -353,22 +277,13 @@ print(train_gen.dtypes)
 # 변수 내 1,2,3,,,,200까지 있기 때문에 스케일링을 통해 그 영향을 줄임
 # type 변수는 문자형 그대로, 더미변수로 생성
 # 변수변환에 사용해준 변수도 버림
-train_gen.drop(['Unnamed: 0.2', 'Unnamed: 0.1', 'Unnamed: 0', 'application_id','birth_year'
+train_gen.drop(['Unnamed: 0.2', 'Unnamed: 0.1', 'Unnamed: 0', 'application_id','birth_year',
        'loanapply_insert_time','company_enter_month','insert_time','입사_년도','입사_월',
        '근속년도','month','user_id'],axis=1,inplace = True)
 #%%
-train_unu.drop(['Unnamed: 0.2', 'Unnamed: 0.1', 'Unnamed: 0', 'application_id','birth_year'
+test_gen.drop(['Unnamed: 0.2', 'Unnamed: 0.1', 'Unnamed: 0', 'application_id','birth_year',
        'loanapply_insert_time','company_enter_month','insert_time','입사_년도','입사_월',
        '근속년도','month','user_id'],axis=1,inplace = True)
-#%%
-test_gen.drop(['Unnamed: 0.2', 'Unnamed: 0.1', 'Unnamed: 0', 'application_id','birth_year'
-       'loanapply_insert_time','company_enter_month','insert_time','입사_년도','입사_월',
-       '근속년도','month','user_id'],axis=1,inplace = True)
-#%%
-test_unu.drop(['Unnamed: 0.2', 'Unnamed: 0.1', 'Unnamed: 0', 'application_id','birth_year'
-       'loanapply_insert_time','company_enter_month','insert_time','입사_년도','입사_월',
-       '근속년도','month','user_id'],axis=1,inplace = True)
-
 #%%
 # 데이터 나눠주기
 # 1단계 train_gen에서 loan 결측 행 분리
@@ -435,9 +350,13 @@ test_gen_drop_na.to_csv('test_gen_drop_na_cp.csv',encoding = 'cp949')
 test_gen_enter.to_csv('test_gen_enter_cp.csv',encoding = 'cp949')
 test_gen_loan.to_csv('test_gen_loan_cp.csv',encoding = 'cp949')
 
-
 #%%
 print(train_gen.columns)
+#%%
+train_gen_drop_na = pd.read_csv('train_gen_drop_na.csv')
+#%%
+test_gen_drop_na = pd.read_csv('test_gen_drop_na.csv')
+
 #%%
 # train_gen 스케일링을 위한 수치형, 범주형 나누기
 train_gen_num = train_gen_drop_na.copy()[['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
@@ -449,113 +368,71 @@ train_gen_ob = train_gen_drop_na.copy().drop(['bank_id', 'product_id', 'loan_lim
        'existing_loan_amt', '근속개월', 'age'],axis=1)
 
 #%%
-# train_unu 스케일링을 위한 수치형, 범주형 나누기
-train_unu_num = train_unu.copy()[['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
-       'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
-       'existing_loan_amt', '근속개월', 'age']]
-#%%
-train_unu_ob = train_unu.copy().drop(['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
-       'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
-       'existing_loan_amt', '근속개월', 'age'],axis=1)
-
-#%%
 # test_gen 스케일링을 위한 수치형, 범주형 나누기
-test_gen_num = test_gen.copy()[['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
+test_gen_num = test_gen_drop_na.copy()[['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
        'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
        'existing_loan_amt', '근속개월', 'age']]
 #%%
-test_gen_ob = test_gen.copy().drop(['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
+test_gen_ob = test_gen_drop_na.copy().drop(['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
        'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
        'existing_loan_amt', '근속개월', 'age'],axis=1)
-
-#%%
-# test_unu 스케일링을 위한 수치형, 범주형 나누기
-test_unu_num = test_unu.copy()[['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
-       'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
-       'existing_loan_amt', '근속개월', 'age']]
-#%%
-test_unu_ob = test_unu.copy().drop(['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
-       'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
-       'existing_loan_amt', '근속개월', 'age'],axis=1)
-
-#%%
-#로버스트 정규화, 최종 결과로 대부분의 데이터가 결측치가 돼서 나옴
-no_test_unu = test_unu_num.dropna(axis=0)
-no_train_unu=train_unu_num.dropna(axis=0)
-no_test_gen= test_gen_num.dropna(axis=0)
-no_train_gen = train_gen_num.dropna(axis=0)
-
 #%%
 # 이상치가 존재하므로 수치형 변수 gen 스케일링
 # 결측치가 존재하는 데이터로 정규화해주면, 행 전부 결측치가 됨
 # 결측치를 제외한 데이터를 fit, transform으로 적용
 from sklearn.preprocessing import RobustScaler
 rbs = RobustScaler()
-#rbs.fit_transform(no_train_gen) # 결측치 없는 train데이터들로 fit시키고
 train_gen_scaled = rbs.fit_transform(train_gen_num) #fit시킨 데이터 적용
 test_gen_scaled = rbs.transform(test_gen_num) #fit시킨 데이터 적용
-#%%
-# unu 스케일링
-from sklearn.preprocessing import RobustScaler
-rbs.fit_transform(no_train_unu)
-train_unu_scaled = rbs.transform(train_unu_num)
-test_unu_scaled = rbs.transform(test_unu_num)
 #%%
 # 배열 형태로 반환되므로, 데이터 프레임으로 변환
 train_gen_scaled = pd.DataFrame(data = train_gen_scaled )
 test_gen_scaled = pd.DataFrame(data = test_gen_scaled)
-#%%
-train_unu_scaled = pd.DataFrame(data = train_unu_scaled)
-test_unu_scaled = pd.DataFrame(data = test_unu_scaled)
-
 #%%
 # 변수명 삽입
 train_gen_scaled.columns = ['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
        'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
        'existing_loan_amt', '근속개월', 'age']
 
-#%%
-train_unu_scaled.columns = ['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
-       'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
-       'existing_loan_amt', '근속개월', 'age']
-
 test_gen_scaled.columns = ['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
-       'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
-       'existing_loan_amt', '근속개월', 'age']
-
-test_unu_scaled.columns = ['bank_id', 'product_id', 'loan_limit', 'loan_rate', 
        'credit_score', 'yearly_income','desired_amount','existing_loan_cnt',
        'existing_loan_amt', '근속개월', 'age']
 #%%
 # 나눠준 데이터 합치기 concat
 train_gen_sca = pd.concat([train_gen_ob,train_gen_scaled],axis=1)
-#%%
-train_unu_sca = pd.concat([train_unu_ob,train_unu_scaled],axis=1)
 test_gen_sca = pd.concat([test_gen_ob,test_gen_scaled],axis=1)
-test_unu_sca = pd.concat([test_unu_ob,test_unu_scaled],axis=1)
+#%%
+print(train_gen_sca.head())
 
 #%%
-train_gen_loan.to_csv('train_gen_loan.csv')
-train_gen_age.to_csv('train_gen_age.csv')
-train_gen_enter.to_csv('train_gen_enter.csv')
-train_gen_credit.to_csv('train_gen_credit.csv')
-train_gen_drop_na.to_csv('train_gen_drop_na.csv')
+train_gen_sca.to_csv('train_gen_sca.csv')
 
 #%%
-test_gen_loan.to_csv('test_gen_loan.csv')
-test_gen_age.to_csv('test_gen_age.csv')
-test_gen_enter.to_csv('test_gen_enter.csv')
-test_gen_credit.to_csv('test_gen_credit.csv')
-test_gen_drop_na.to_csv('test_gen_drop_na.csv')
+test_gen_sca.to_csv('test_gen_sca.csv')
 #%%
-test_gen_loan.to_csv('test_gen_loan_cp.csv',encoding = 'cp949')
-test_gen_age.to_csv('test_gen_age_cp.csv',encoding = 'cp949')
-test_gen_enter.to_csv('test_gen_enter_cp.csv',encoding = 'cp949')
-test_gen_credit.to_csv('test_gen_credit_cp.csv',encoding = 'cp949')
-test_gen_drop_na.to_csv('test_gen_drop_na_cp.csv',encoding = 'cp949')
-
+test_gen_sca.to_csv('test_gen_sca_cp.csv',encoding = 'cp949')
+#%%
+test_gen_sca.to_csv('test_gen_sca_cp.csv',encoding = 'cp949')
+#%%
+train_gen_sca = pd.read_csv('train_gen_sca.csv')
 #%%
 dum_t_g = pd.get_dummies(train_gen_sca)
+#%%
+train_gen_sca = train_gen_sca.astype({'is_applied':'int64','gender':'int64',
+                                      'bank_id':'int64','product_id':'int64',
+                                      'credit_score':'int64','desired_amount':'int64',
+                                      'existing_loan_cnt':'int64','existing_loan_amt':'int64',
+                                      '근속개월':'int64','age':'int64',
+                                      'yearly_income':'int64','loan_limit':'int64'})
+#%%
+test_gen_sca = test_gen_sca.astype({'is_applied':'int64','gender':'int64',
+                                      'bank_id':'int64','product_id':'int64',
+                                      'credit_score':'int64','desired_amount':'int64',
+                                      'existing_loan_cnt':'int64','existing_loan_amt':'int64',
+                                      '근속개월':'int64','age':'int64',
+                                      'yearly_income':'int64','loan_limit':'int64'})
+
+
 #%%
 # train, validation 나누기
 train_gen_x = train_gen.drop('is_applied',axis=1)
