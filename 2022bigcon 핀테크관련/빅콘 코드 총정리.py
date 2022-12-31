@@ -93,7 +93,7 @@ left_copy['loanapply_insert_time'] = pd.to_datetime(left_copy['loanapply_insert_
 # datetime변수에서 month추출
 left_copy['month'] = pd.DatetimeIndex(left_copy['loanapply_insert_time']).month
 #%%
-# purpose 값 바꿔주기
+# purpose 값 바꿔주기, 영어랑 한글로 나눠져있는데 같은 의미이므로 replace를 이용해서 한글로 통일
 left_copy = left_copy.replace('LIVING','생활비')
 left_copy = left_copy.replace('SWITCHLOAN', '대환대출')
 left_copy = left_copy.replace('BUSINESS', '사업자금')
@@ -157,6 +157,7 @@ print(f'test개인회생납입 완료 여부 결측 개수: {test_unu.personal_r
 #%%
 #train셋의 user id로 탄생년도와 성별 채우기
 # 두 변수는 개인의 고유적인 특징, 불변이기 때문에 채워줌
+# 데이터프레임에 함수 적용할 때, transform
 train_gen['birth_year'] = train_gen['birth_year'].fillna(train_gen.groupby('user_id')['birth_year'].transform('mean'))
 train_gen['gender'] = train_gen['gender'].fillna(train_gen.groupby('user_id')['gender'].transform('mean'))
 #%%
@@ -246,7 +247,8 @@ train_gen.dropna(subset=['user_id'],axis = 0,inplace = True)
 #%%
 # company_enter_month 6자리, 8자리 어지러움, 근속년수, 근속일 등으로 다르게 이용
 # 입사년월이 6자리인 애들
-train_gen['입사_년도'] = train_gen['company_enter_month']//100
+# //와 %를 이용해 나머지와 몫을 출력하여 년월일 
+train_gen['입사_년도'] = train_gen['company_enter_month']//100 
 train_gen['입사_월'] = train_gen['company_enter_month']%100
 #%%
 # 확인했을 때 잘 분리됨
@@ -417,6 +419,8 @@ train_gen_enter.to_csv('train_gen_enter_cp_1013.csv',encoding = 'cp949',index = 
 train_gen_loan.to_csv('train_gen_loan_cp_1013.csv',encoding = 'cp949',index = False)
 #%%
 # 데이터 나눠주기
+# 결측치가 존재하는 행들에 대해 채워주지 않고, 분리해서 각 Data에 대한 Modeling
+# 분리 순서는 결측행 개수 
 # 1단계 test_gen에서 loan 결측 행 분리
 test_gen_copy = test_gen.copy()
 test_gen_loan = test_gen_copy[test_gen_copy['loan_limit'].isnull()==True] # loan만 결측치인 행 추출
@@ -474,6 +478,7 @@ test_gen_ob = test_gen_drop_na.copy().drop(['bank_id', 'product_id', 'loan_limit
 # 이상치가 존재하므로 수치형 변수 gen 스케일링
 # 결측치가 존재하는 데이터로 정규화해주면, 행 전부 결측치가 됨
 # 결측치를 제외한 데이터를 fit, transform으로 적용
+# 변수 간, 변수 내의 차이가 존재하기 때문에, Median과 Quantile로 계산하는 Robust로 Scaling
 from sklearn.preprocessing import RobustScaler
 rbs = RobustScaler()
 #rbs.fit_transform(no_train_gen) # 결측치 없는 train데이터들로 fit시키고
@@ -495,6 +500,7 @@ test_gen_scaled.columns = ['bank_id', 'product_id', 'loan_limit', 'loan_rate',
 #%%
 # train_gen_ob셋은 원래 데이터 셋에서 행들을 제거해준것이기 때문에 인덱스가 일정하지 않음
 # train_gen_scaled는 새로 추출해서 한 값이기에 인덱스가 1~800000까지 일정
+# reset_index로 초기화 
 train_gen_scaled.reset_index(drop = False, inplace = True)
 train_gen_ob.reset_index(drop = False, inplace = True)
 
@@ -996,124 +1002,45 @@ test_gen_drop_na_sca = pd.concat([test_gen_ob,test_gen_drop_na_scaled], axis=1)
 train_gen_credit = train_gen_credit.drop(['credit_score'], axis = 1)
 # In[26]:
 test_gen_credit = test_gen_credit.drop(['credit_score'], axis = 1)
-
-
-#%%
-
-train_gen_sca=pd.read_csv('train_gen_drop_na_sca.csv',encoding='cp949')
-test_gen_sca=pd.read_csv('test_gen_drop_na_sca.csv',encoding='cp949')
-
-
-# In[9]:
-
-
-train_gen_sca.columns
-
-
-# In[10]:
-
-
-test_gen_sca.columns
-
-
-# In[11]:
-
-
-train_gen_sca.drop(['Unnamed: 0', 'level_0', 'index'], axis=1, inplace=True)
-
-
-# In[13]:
-
-
-test_gen_sca.drop(['Unnamed: 0', 'index'], axis=1, inplace=True)
-
-
-# ## Sampling
-
-# #### 1) 더미변수 
-
-# In[20]:
-
-
-train_gen_sca.columns
-
-
-# In[21]:
-
-
+# Modeling전 Category 더미화
 final=pd.get_dummies(train_gen_sca, columns=['income_type', 'employment_type', 'houseown_type', 'purpose'])
-
-
-# In[22]:
-
-
+# 확인
 final.columns
-
-
-# #### 2) sampling
-
 # In[23]:
-
-
+# Target 개수 확인
 final.is_applied.value_counts()
-
-
-# In[26]:
-
-
-import seaborn as sns
-
-
 # In[28]:
-
-
 sns.countplot(x="is_applied", data=final)
 plt.title('is_applied')
 plt.show()
-
-
-# # 불균형 데이터 비율 추출을 위한 층화추출
-
-# In[29]:
-
-
+# 불균형 데이터 비율 추출을 위한 층화추출
 from sklearn.model_selection import StratifiedShuffleSplit
 split = StratifiedShuffleSplit(n_splits=1, test_size=0.25, random_state=777)
 for train_idx, test_idx in split.split(final, final["is_applied"]):
     tr = final.loc[train_idx]
     val = final.loc[test_idx]
 
-
 # In[30]:
-
-
+# Sampling 이후 비율 계산
 print(tr["is_applied"].value_counts() / len(tr))
 val["is_applied"].value_counts() / len(val)
 
 # In[32]:
-
-
+# test셋과 Frame을 맞춰주기 위해 변수 제거 작업
 x_train=tr.drop(['is_applied','houseown_type_자가'], axis=1)
 y_train=tr['is_applied']
 
-
 # In[33]:
-
 
 x_val=val.drop(['is_applied','houseown_type_자가'], axis=1)
 y_val=val['is_applied']
 
-
 # In[34]:
-
 
 x_train.shape, x_val.shape
 
-
-# - Grid Search 적용 X
-
+# - Grid Search 적용 X, 시간 안 됨
 # In[35]:
-
 
 xgb1 = XGBClassifier(
     learning_rate =0.1,
@@ -1130,29 +1057,20 @@ xgb1 = XGBClassifier(
 #%%
 xgb1.fit( x_train, y_train)
 
-
 # In[36]:
-
-
+# Validation
 pred = xgb1.predict(x_val)
-
 
 # In[37]:
 
-
 print(classification_report(y_val, pred, target_names=['class 0', 'class 1']))
 
-
 # In[38]:
-
-
+# 성능 지표 확인을 위한 Roc
 from sklearn.metrics import roc_auc_score
 print('roc_auc_score {}'.format(roc_auc_score(y_val, pred)))
 
-
 # In[39]:
-
-
 from sklearn.metrics import roc_curve
 
 pred_positive_label = xgb1.predict_proba(x_val)[:,1]
@@ -1160,7 +1078,6 @@ pred_positive_label = xgb1.predict_proba(x_val)[:,1]
 fprs, tprs, thresholds = roc_curve(y_val, pred_positive_label)
 
 print('샘플 추츨')
-print()
 
 thr_idx = np.arange(1, thresholds.shape[0], 6)
 print('thr idx:', thr_idx)
@@ -1168,19 +1085,12 @@ print('thr thresholds value:', thresholds[thr_idx])
 print('thr thresholds value:', fprs[thr_idx])
 print('thr thresholds value:', tprs[thr_idx])
 
-
 # In[40]:
-
-
-pred_positive_label = xgb1.predict_proba(x_val)[:,1]
+pred_positive_label = xgb1.predict_proba(x_val)[:,1] # 0과 1에 대한 확률
 fprs, tprs, thresholds = roc_curve(y_val, pred_positive_label)
-
 precisions, recalls, thresholds = roc_curve(y_val, pred_positive_label)
-
 plt.figure(figsize=(15, 5))
-
 plt.plot([0,1], [0, 1], label='STR')
-
 plt.plot(fprs, tprs, label='ROC')
 
 plt.xlabel('FPR')
@@ -1189,14 +1099,9 @@ plt.legend()
 plt.grid()
 plt.show()
 
-
 # ## test set 모델링
 
-# In[41]:
-
-
 test_gen_sca.isnull().sum()
-
 
 # In[42]:
 
@@ -1417,7 +1322,7 @@ test_gen_drop_na.to_csv('test_gen_drop_na예측완료1_cp.csv',encoding = 'cp949
 
 #%%
 ''' 
-unu 전처리
+train_unu 
 '''
 os.chdir('C:\\Users\\215-01\\Desktop\\빅콘\\2022빅콘테스트_데이터분석리그_데이터분석분야_퓨처스부문_데이터셋_220908')
 #%%
