@@ -294,10 +294,32 @@ ods listing;
 
 /*3대 Multi. Logistic. Regression */
 
-title '3대 소 다변량 로지스틱';
-proc logistic data=cow_3 plots=all;
+title '3대 소 다변량 로지스틱, forward selection';
+proc logistic data=cow_3 plots=roc;
 class farm_level(ref='A') gender (ref='N_M') /param = ref;
-model target(event='1') = gender s_w sl_m s_m_w s_m_i s_t_m a_s_m_w a_s_m_i a_s_t_m b_s_m_w b_s_m_i b_s_f_m b_s_t_m b_s_c farm_level  / link = glogit;
+model target(event='1') = gender s_w sl_m s_m_w s_m_i s_f_m s_t_m s_c a_s_m_w a_s_m_i a_s_f_m a_s_t_m a_s_c b_s_m_w b_s_m_i b_s_f_m 
+b_s_t_m b_s_c farm_level/ link = glogit selection = forward slentry = 0.05;
+run;
+
+title '3대 소 다변량 로지스틱, backward selection';
+proc logistic data=cow_3 plots=roc;
+class farm_level(ref='A') gender (ref='N_M') /param = ref;
+model target(event='1') = gender s_w sl_m s_m_w s_m_i s_f_m s_t_m s_c a_s_m_w a_s_m_i a_s_f_m a_s_t_m a_s_c b_s_m_w b_s_m_i b_s_f_m 
+b_s_t_m b_s_c farm_level/ link = glogit selection = backward slstay = 0.05;
+run;
+
+title '3대 소 다변량 로지스틱, stepwise selection';
+proc logistic data=cow_3 plots=roc;
+class farm_level(ref='A') gender (ref='N_M') /param = ref;
+model target(event='1') = gender s_w sl_m s_m_w s_m_i s_f_m s_t_m s_c a_s_m_w a_s_m_i a_s_f_m a_s_t_m a_s_c b_s_m_w b_s_m_i b_s_f_m 
+b_s_t_m b_s_c farm_level/ link = glogit selection = stepwise slentry = 0.05 slstay = 0.05;
+run;
+
+title '3대 소 다변량 로지스틱';
+proc logistic data=cow_3 plots=roc;
+class farm_level(ref='A') gender (ref='N_M') /param = ref;
+model target(event='1') = gender s_w sl_m s_m_w s_m_i  s_t_m  a_s_m_w a_s_m_i  a_s_t_m a_s_c b_s_m_w b_s_m_i b_s_f_m 
+b_s_t_m b_s_c farm_level/ link = glogit;
 run;
 
 /*5대 Multi. Logistic. Regression */
