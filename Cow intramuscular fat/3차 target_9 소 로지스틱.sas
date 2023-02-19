@@ -1,7 +1,7 @@
 /* 3대 소 단변량 */
 /* 소 3대 처리 */ 
 /* import train */
-filename a 'C:\Users\Owner\Desktop\윤태준\소\3차 요청자료\소_3대 정리\등급추가_train_cp.csv' encoding='cp949';
+filename a 'C:\Users\Owner\Desktop\윤태준\소\3차 요청자료\소_3대 정리\3대_9_등급추가_train_cp.csv' encoding='cp949';
 proc import datafile= a
 dbms=csv
 out = cow_3
@@ -12,7 +12,7 @@ proc print data= cow_3 (obs=5);
 run;
 
 /* import test */
-filename a 'C:\Users\Owner\Desktop\윤태준\소\3차 요청자료\소_3대 정리\등급추가_test_cp.csv' encoding='cp949';
+filename a 'C:\Users\Owner\Desktop\윤태준\소\3차 요청자료\소_3대 정리\3대_9_등급추가_test_cp.csv' encoding='cp949';
 proc import datafile= a
 dbms=csv
 out = cow_3_test
@@ -169,8 +169,8 @@ run;
 title '3대 소 다변량 로지스틱, 형매 등지방, 마릿수, 어미형매 등지방 평균 제외';
 proc logistic data=cow_3 plots=roc;
 class farm_level(ref='C') gender (ref='N_M') /param = ref;
-model target(event='1') =gender s_w sl_m s_m_w s_m_i s_t_m a_s_m_w a_s_m_i a_s_t_m a_s_c b_s_m_w b_s_m_i b_s_f_m 
-b_s_t_m b_s_c farm_level/ link = glogit;
+model target(event='1') = gender sl_m s_w s_m_w s_m_i s_t_m s_c a_s_m_w a_s_m_i a_s_t_m b_s_m_w b_s_m_i b_s_f_m 
+b_s_t_m farm_level/ link = glogit;
 run;
 
 /* 기초통계량 */
@@ -184,19 +184,9 @@ run;
 /*train set의 confusion matirx auc,sesi, spec뽑기 */
 
 title1 'Uni&Multi';
-proc logistic data=cow_3 plots(maxpoints=none)=roc;
-class farm_level(ref='C') /param = ref;
-model target(event='1') = s_w sl_m s_m_w s_m_i s_t_m a_s_m_w a_s_t_m b_s_m_w 
-b_s_t_m farm_level/ link = glogit rocci;
-output out= two p = phat;
-store uni_multi;
-run;
-
-title1 'Uni&Multi';
-proc logistic data=cow_3 plots(maxpoints=none)=roc;
-class farm_level(ref='A') /param = ref;
-model target(event='1') = s_w sl_m s_m_w s_m_i s_t_m a_s_m_w a_s_t_m b_s_m_w 
-b_s_t_m farm_level/ link = glogit rocci;
+proc logistic data=cow_3 plots=roc;
+class farm_level(ref='C') gender (ref='N_M') /param = ref;
+model target(event='1') = gender sl_m s_w s_m_w s_m_i s_t_m s_c a_s_m_w a_s_m_i a_s_t_m b_s_t_m farm_level/ link = glogit;
 output out= two p = phat;
 store uni_multi;
 run;
